@@ -40,7 +40,7 @@ interface AuthContextType {
   effectiveRole: string;
   hasRole: (target: string | string[]) => boolean;
   signIn: (email: string, password: string) => Promise<{ error: string | null }>;
-  signUp: (email: string, password: string, fullName: string, phone: string, countyId?: string) => Promise<{ error: string | null }>;
+  signUp: (email: string, password: string, fullName: string, phone: string, countyId?: string, role?: string) => Promise<{ error: string | null }>;
   signOut: () => Promise<void>;
   updateProfile: (updates: Partial<Profile>) => Promise<{ error: string | null }>;
   refreshProfile: () => Promise<void>;
@@ -133,7 +133,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     return { error: null };
   };
 
-  const signUp = async (email: string, password: string, fullName: string, phone: string, countyId?: string): Promise<{ error: string | null }> => {
+  const signUp = async (email: string, password: string, fullName: string, phone: string, countyId?: string, role?: string): Promise<{ error: string | null }> => {
+    const assignedRole = role || 'citizen';
     const { data, error } = await supabase.auth.signUp({ email, password });
     if (error) return { error: error.message };
     if (data.user) {
@@ -142,25 +143,35 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         email,
         full_name: fullName,
         phone,
-        role: 'citizen',
+        role: assignedRole,
         status: 'active',
         account_status: 'active',
         county_id: countyId || null,
         password_change_required: false,
+        is_demo: true,
+        demo_role: assignedRole,
       });
+      const dashboardRoutes: Record<string, string> = {
+        citizen: '/citizen',
+        contractor: '/contractor',
+        dispatcher: '/dispatcher',
+        admin: '/admin',
+        executive: '/executive',
+        superadmin: '/superadmin',
+      };
       await supabase.from('notifications').insert({
         user_id: data.user.id,
         title: 'Welcome to SmartWaste Africa Nexus',
-        body: 'Your citizen account has been created. You can now report issues and track service requests.',
+        body: `Your ${assignedRole} account has been created. You can now access your dashboard.`,
         type: 'success',
-        action_url: '/citizen',
+        action_url: dashboardRoutes[assignedRole] || '/citizen',
       });
       await supabase.from('audit_logs').insert({
         user_id: data.user.id,
         action: 'user_registered',
         entity_type: 'profiles',
         entity_id: data.user.id,
-        details: { role: 'citizen', email, county_id: countyId },
+        details: { role: assignedRole, email, county_id: countyId },
       });
       await fetchProfile(data.user.id);
     }
@@ -248,8 +259,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     if (targets.includes('all')) return true;
     const userRole = profile?.role || '';
     const effective = demoRole || userRole;
-    if (effective === 'super_admin') return true;
-    return targets.includes(effective);
+    // Normalize role names
+    const normalizedRole = effective === 'superadmin' ? 'super_admin' :
+                           effective === 'admin' ? 'municipal_admin' : effective;
+    if (normalizedRole === 'super_admin') return true;
+    return targets.some(t => {
+      const normalized = t === 'superadmin' ? 'super_admin' :
+                         t === 'admin' ? 'municipal_admin' : t;
+      return normalized === normalizedRole;
+    });
   };
 
   const effectiveRole = demoRole || profile?.role || '';

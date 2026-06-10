@@ -12,17 +12,19 @@ const demoRoles = [
   { id: 'citizen', label: 'Citizen', color: 'bg-emerald-500', desc: 'Report issues, request pickups', dashboard: '/citizen' },
   { id: 'contractor', label: 'Contractor', color: 'bg-blue-500', desc: 'Execute collection routes', dashboard: '/contractor' },
   { id: 'dispatcher', label: 'Dispatcher', color: 'bg-violet-500', desc: 'Coordinate operations', dashboard: '/dispatcher' },
-  { id: 'municipal_admin', label: 'Admin', color: 'bg-amber-500', desc: 'Manage county operations', dashboard: '/admin' },
+  { id: 'admin', label: 'Admin', color: 'bg-amber-500', desc: 'Manage county operations', dashboard: '/admin' },
   { id: 'executive', label: 'Executive', color: 'bg-teal-500', desc: 'View analytics and reports', dashboard: '/executive' },
-  { id: 'super_admin', label: 'Super Admin', color: 'bg-red-500', desc: 'Full platform control', dashboard: '/superadmin' },
+  { id: 'superadmin', label: 'Super Admin', color: 'bg-red-500', desc: 'Full platform control', dashboard: '/superadmin' },
 ];
 
 const roleLabels: Record<string, string> = {
   citizen: 'Citizen',
   contractor: 'Contractor',
   dispatcher: 'Dispatcher',
+  admin: 'Municipal Admin',
   municipal_admin: 'Municipal Admin',
   executive: 'Executive',
+  superadmin: 'Super Admin',
   super_admin: 'Super Admin',
 };
 
@@ -366,23 +368,25 @@ export default function TopNav() {
 
 function getNavLinksForRole(role: string, hasRole: (roles: string[]) => boolean) {
   const links: { path: string; label: string }[] = [];
+  const normalizedRole = role === 'superadmin' ? 'super_admin' :
+                          role === 'admin' ? 'municipal_admin' : role;
 
   // Citizen navigation
-  if (role === 'citizen') {
+  if (normalizedRole === 'citizen') {
     links.push({ path: '/citizen', label: 'My Reports' });
     links.push({ path: '/reports', label: 'Reports' });
     return links;
   }
 
   // Contractor navigation
-  if (role === 'contractor') {
+  if (normalizedRole === 'contractor') {
     links.push({ path: '/contractor', label: 'My Routes' });
     links.push({ path: '/reports', label: 'Reports' });
     return links;
   }
 
   // Dispatcher navigation
-  if (role === 'dispatcher') {
+  if (normalizedRole === 'dispatcher') {
     links.push({ path: '/dispatcher', label: 'Dispatch' });
     links.push({ path: '/incidents', label: 'Incidents' });
     links.push({ path: '/fleet', label: 'Fleet' });
@@ -393,7 +397,7 @@ function getNavLinksForRole(role: string, hasRole: (roles: string[]) => boolean)
   }
 
   // Municipal Admin navigation
-  if (role === 'municipal_admin') {
+  if (normalizedRole === 'municipal_admin') {
     links.push({ path: '/admin', label: 'Dashboard' });
     links.push({ path: '/users', label: 'Users' });
     links.push({ path: '/incidents', label: 'Incidents' });
@@ -405,7 +409,7 @@ function getNavLinksForRole(role: string, hasRole: (roles: string[]) => boolean)
   }
 
   // Executive navigation
-  if (role === 'executive') {
+  if (normalizedRole === 'executive') {
     links.push({ path: '/executive', label: 'Overview' });
     links.push({ path: '/sustainability', label: 'Sustainability' });
     links.push({ path: '/digital-twin', label: 'Digital Twin' });
@@ -414,7 +418,7 @@ function getNavLinksForRole(role: string, hasRole: (roles: string[]) => boolean)
   }
 
   // Super Admin navigation
-  if (role === 'super_admin') {
+  if (normalizedRole === 'super_admin') {
     links.push({ path: '/superadmin', label: 'Console' });
     links.push({ path: '/users', label: 'Users' });
     links.push({ path: '/permissions', label: 'Permissions' });

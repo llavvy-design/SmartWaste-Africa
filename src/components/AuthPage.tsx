@@ -2,7 +2,25 @@ import { useState } from 'react';
 import { motion } from 'framer-motion';
 import { useAuth } from '../context/AuthContext';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { Recycle, Mail, Lock, User, Phone, ArrowRight, AlertCircle, Loader2 } from 'lucide-react';
+import { Recycle, Mail, Lock, User, Phone, ArrowRight, AlertCircle, Loader2, ChevronDown, Users } from 'lucide-react';
+
+const ROLES = [
+  { id: 'citizen', label: 'Citizen', description: 'Report issues, track services' },
+  { id: 'contractor', label: 'Contractor', description: 'Manage waste collection routes' },
+  { id: 'dispatcher', label: 'Dispatcher', description: 'Coordinate fleet operations' },
+  { id: 'admin', label: 'Municipal Admin', description: 'Manage county waste systems' },
+  { id: 'executive', label: 'Executive', description: 'View analytics and reports' },
+  { id: 'superadmin', label: 'Super Admin', description: 'Full system administration' },
+];
+
+const DEMO_ACCOUNTS = [
+  { email: 'citizen@smartwaste.africa', password: 'Demo@2024', role: 'citizen' },
+  { email: 'contractor@smartwaste.africa', password: 'Demo@2024', role: 'contractor' },
+  { email: 'dispatcher@smartwaste.africa', password: 'Demo@2024', role: 'dispatcher' },
+  { email: 'admin@smartwaste.africa', password: 'Demo@2024', role: 'admin' },
+  { email: 'executive@smartwaste.africa', password: 'Demo@2024', role: 'executive' },
+  { email: 'superadmin@smartwaste.africa', password: 'Demo@2024', role: 'superadmin' },
+];
 
 export default function AuthPage() {
   const { signIn, signUp, isAuthenticated } = useAuth();
@@ -13,6 +31,7 @@ export default function AuthPage() {
   const [password, setPassword] = useState('');
   const [fullName, setFullName] = useState('');
   const [phone, setPhone] = useState('');
+  const [selectedRole, setSelectedRole] = useState('citizen');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
@@ -34,9 +53,23 @@ export default function AuthPage() {
       else navigate(from);
     } else {
       if (!fullName.trim()) { setError('Full name is required'); setLoading(false); return; }
-      const { error } = await signUp(email, password, fullName, phone);
+      const { error } = await signUp(email, password, fullName, phone, undefined, selectedRole);
       if (error) setError(error);
       else navigate(from);
+    }
+    setLoading(false);
+  };
+
+  const handleDemoLogin = async (account: typeof DEMO_ACCOUNTS[0]) => {
+    setError('');
+    setLoading(true);
+    setEmail(account.email);
+    setPassword(account.password);
+    const { error } = await signIn(account.email, account.password);
+    if (error) {
+      setError(`Demo account not yet available. Error: ${error}`);
+    } else {
+      navigate(from);
     }
     setLoading(false);
   };
@@ -100,6 +133,18 @@ export default function AuthPage() {
                     className="w-full pl-10 pr-3 py-2.5 bg-slate-800 border border-slate-700 rounded-lg text-sm text-slate-300 focus:border-emerald-500 outline-none"
                   />
                 </div>
+                <div className="relative">
+                  <select
+                    value={selectedRole}
+                    onChange={(e) => setSelectedRole(e.target.value)}
+                    className="w-full px-3 py-2.5 bg-slate-800 border border-slate-700 rounded-lg text-sm text-slate-300 focus:border-emerald-500 outline-none appearance-none cursor-pointer"
+                  >
+                    {ROLES.map((r) => (
+                      <option key={r.id} value={r.id}>{r.label} - {r.description}</option>
+                    ))}
+                  </select>
+                  <ChevronDown className="w-4 h-4 text-slate-500 absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+                </div>
               </>
             )}
 
@@ -151,6 +196,34 @@ export default function AuthPage() {
             </button>
           </form>
         </div>
+
+        {mode === 'signin' && (
+          <motion.div
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.2 }}
+            className="mt-6 glass-panel p-4"
+          >
+            <div className="flex items-center gap-2 mb-3">
+              <Users className="w-4 h-4 text-emerald-400" />
+              <span className="text-sm font-medium text-slate-300">Demo Accounts</span>
+            </div>
+            <div className="grid grid-cols-2 gap-2">
+              {DEMO_ACCOUNTS.map((account) => (
+                <button
+                  key={account.email}
+                  onClick={() => handleDemoLogin(account)}
+                  disabled={loading}
+                  className="text-left px-3 py-2 bg-slate-800/50 hover:bg-slate-700/50 border border-slate-700/50 hover:border-emerald-500/30 rounded-lg transition-colors disabled:opacity-50"
+                >
+                  <div className="text-xs font-medium text-emerald-400 capitalize">{account.role}</div>
+                  <div className="text-xs text-slate-500 truncate">{account.email}</div>
+                </button>
+              ))}
+            </div>
+            <p className="text-xs text-slate-500 mt-3 text-center">Password for all demo accounts: Demo@2024</p>
+          </motion.div>
+        )}
 
         <p className="text-center text-xs text-slate-600 mt-6">
           By using this platform, you agree to the municipal waste management terms.

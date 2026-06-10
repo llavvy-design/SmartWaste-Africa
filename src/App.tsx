@@ -44,8 +44,10 @@ function RoleDashboard() {
     case 'citizen': return <CitizenDashboard />;
     case 'contractor': return <ContractorDashboard />;
     case 'dispatcher': return <DispatcherDashboard />;
+    case 'admin':
     case 'municipal_admin': return <AdminDashboard />;
     case 'executive': return <ExecutiveDashboard />;
+    case 'superadmin':
     case 'super_admin': return <SuperAdminDashboard />;
     default: return <CitizenDashboard />;
   }
@@ -78,26 +80,26 @@ function MainLayout() {
           {/* Role-specific dashboard routes */}
           <Route path="/dashboard" element={<ProtectedRoute><RoleDashboard /></ProtectedRoute>} />
           <Route path="/citizen" element={<ProtectedRoute><CitizenPortal /></ProtectedRoute>} />
-          <Route path="/contractor" element={<ProtectedRoute roles={['contractor','dispatcher','municipal_admin','super_admin']}><ContractorPortal /></ProtectedRoute>} />
-          <Route path="/dispatcher" element={<ProtectedRoute roles={['dispatcher','municipal_admin','super_admin']}><DispatcherDashboard /></ProtectedRoute>} />
-          <Route path="/admin" element={<ProtectedRoute roles={['municipal_admin','super_admin']}><AdminDashboard /></ProtectedRoute>} />
-          <Route path="/executive" element={<ProtectedRoute roles={['executive','municipal_admin','super_admin']}><ExecutivePortal /></ProtectedRoute>} />
-          <Route path="/superadmin" element={<ProtectedRoute roles={['super_admin']}><SuperAdminDashboard /></ProtectedRoute>} />
+          <Route path="/contractor" element={<ProtectedRoute roles={['contractor','dispatcher','admin','municipal_admin','superadmin','super_admin']}><ContractorPortal /></ProtectedRoute>} />
+          <Route path="/dispatcher" element={<ProtectedRoute roles={['dispatcher','admin','municipal_admin','superadmin','super_admin']}><DispatcherDashboard /></ProtectedRoute>} />
+          <Route path="/admin" element={<ProtectedRoute roles={['admin','municipal_admin','superadmin','super_admin']}><AdminDashboard /></ProtectedRoute>} />
+          <Route path="/executive" element={<ProtectedRoute roles={['executive','admin','municipal_admin','superadmin','super_admin']}><ExecutivePortal /></ProtectedRoute>} />
+          <Route path="/superadmin" element={<ProtectedRoute roles={['superadmin','super_admin']}><SuperAdminDashboard /></ProtectedRoute>} />
           {/* Shared pages */}
-          <Route path="/gis" element={<ProtectedRoute roles={['dispatcher','municipal_admin','super_admin']}><GISCenter /></ProtectedRoute>} />
-          <Route path="/telemetry" element={<ProtectedRoute roles={['dispatcher','municipal_admin','super_admin']}><Telemetry /></ProtectedRoute>} />
-          <Route path="/agents" element={<ProtectedRoute roles={['dispatcher','municipal_admin','super_admin']}><Agents /></ProtectedRoute>} />
-          <Route path="/fleet" element={<ProtectedRoute roles={['dispatcher','municipal_admin','super_admin']}><Fleet /></ProtectedRoute>} />
-          <Route path="/bins" element={<ProtectedRoute roles={['dispatcher','municipal_admin','super_admin']}><SmartBinNetwork /></ProtectedRoute>} />
-          <Route path="/sustainability" element={<ProtectedRoute roles={['executive','municipal_admin','super_admin']}><Sustainability /></ProtectedRoute>} />
-          <Route path="/incidents" element={<ProtectedRoute roles={['dispatcher','municipal_admin','super_admin']}><IncidentCenter /></ProtectedRoute>} />
-          <Route path="/digital-twin" element={<ProtectedRoute roles={['executive','municipal_admin','super_admin']}><DigitalTwin /></ProtectedRoute>} />
+          <Route path="/gis" element={<ProtectedRoute roles={['dispatcher','admin','municipal_admin','superadmin','super_admin']}><GISCenter /></ProtectedRoute>} />
+          <Route path="/telemetry" element={<ProtectedRoute roles={['dispatcher','admin','municipal_admin','superadmin','super_admin']}><Telemetry /></ProtectedRoute>} />
+          <Route path="/agents" element={<ProtectedRoute roles={['dispatcher','admin','municipal_admin','superadmin','super_admin']}><Agents /></ProtectedRoute>} />
+          <Route path="/fleet" element={<ProtectedRoute roles={['dispatcher','admin','municipal_admin','superadmin','super_admin']}><Fleet /></ProtectedRoute>} />
+          <Route path="/bins" element={<ProtectedRoute roles={['dispatcher','admin','municipal_admin','superadmin','super_admin']}><SmartBinNetwork /></ProtectedRoute>} />
+          <Route path="/sustainability" element={<ProtectedRoute roles={['executive','admin','municipal_admin','superadmin','super_admin']}><Sustainability /></ProtectedRoute>} />
+          <Route path="/incidents" element={<ProtectedRoute roles={['dispatcher','admin','municipal_admin','superadmin','super_admin']}><IncidentCenter /></ProtectedRoute>} />
+          <Route path="/digital-twin" element={<ProtectedRoute roles={['executive','admin','municipal_admin','superadmin','super_admin']}><DigitalTwin /></ProtectedRoute>} />
           <Route path="/reports" element={<ProtectedRoute><ReportGenerator /></ProtectedRoute>} />
           {/* Admin pages */}
-          <Route path="/users" element={<ProtectedRoute roles={['municipal_admin','super_admin']}><UserManagement /></ProtectedRoute>} />
-          <Route path="/audit" element={<ProtectedRoute roles={['municipal_admin','super_admin']}><AuditTrail /></ProtectedRoute>} />
-          <Route path="/settings" element={<ProtectedRoute roles={['municipal_admin','super_admin']}><SystemSettings /></ProtectedRoute>} />
-          <Route path="/permissions" element={<ProtectedRoute roles={['super_admin']}><Permissions /></ProtectedRoute>} />
+          <Route path="/users" element={<ProtectedRoute roles={['admin','municipal_admin','superadmin','super_admin']}><UserManagement /></ProtectedRoute>} />
+          <Route path="/audit" element={<ProtectedRoute roles={['admin','municipal_admin','superadmin','super_admin']}><AuditTrail /></ProtectedRoute>} />
+          <Route path="/settings" element={<ProtectedRoute roles={['admin','municipal_admin','superadmin','super_admin']}><SystemSettings /></ProtectedRoute>} />
+          <Route path="/permissions" element={<ProtectedRoute roles={['superadmin','super_admin']}><Permissions /></ProtectedRoute>} />
           {/* User pages */}
           <Route path="/notifications" element={<ProtectedRoute><Notifications /></ProtectedRoute>} />
           <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
