@@ -10,6 +10,7 @@ export interface Profile {
   avatar_url: string;
   county_id: string | null;
   city_id: string | null;
+  subcounty_id: string | null;
   role: string;
   status: string;
   account_status: string;
@@ -23,6 +24,7 @@ export interface Profile {
   password_change_required: boolean;
   login_count: number;
   notification_preferences: Record<string, boolean>;
+  two_factor_enabled: boolean;
   created_at: string;
   updated_at: string;
 }

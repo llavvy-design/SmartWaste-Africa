@@ -1,18 +1,43 @@
+import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useCounties, useSmartBins, useFleetVehicles } from '../hooks/useSwanData';
+import { supabase } from '../lib/supabase';
 import {
   Shield, Users, Activity, Settings, AlertTriangle, Database,
-  ArrowRight, Server, Globe, Zap, Lock, Clock
+  ArrowRight, Server, Globe, Zap, Lock, Clock, RefreshCw,
+  CheckCircle, XCircle, RefreshCcw, UserPlus, Key, Crown
 } from 'lucide-react';
+
+const roleLabels: Record<string, string> = {
+  citizen: 'Citizen',
+  contractor: 'Contractor',
+  dispatcher: 'Dispatcher',
+  municipal_admin: 'Municipal Admin',
+  executive: 'Executive',
+  super_admin: 'Super Admin',
+};
+
+const roleColors: Record<string, string> = {
+  citizen: 'text-emerald-400 bg-emerald-500/10 border-emerald-500/20',
+  contractor: 'text-blue-400 bg-blue-500/10 border-blue-500/20',
+  dispatcher: 'text-violet-400 bg-violet-500/10 border-violet-500/20',
+  municipal_admin: 'text-amber-400 bg-amber-500/10 border-amber-500/20',
+  executive: 'text-teal-400 bg-teal-500/10 border-teal-500/20',
+  super_admin: 'text-red-400 bg-red-500/10 border-red-500/20',
+};
 
 export default function SuperAdminDashboard() {
   const navigate = useNavigate();
-  const { profile } = useAuth();
+  const { profile, setDemoRole } = useAuth();
   const { data: counties } = useCounties();
   const { data: bins } = useSmartBins();
   const { data: fleet } = useFleetVehicles();
+  const [users, setUsers] = useState<any[]>([]);
+  const [loadingUsers, setLoadingUsers] = useState(true);
+  const [permissions, setPermissions] = useState<any[]>([]);
+  const [demoAccounts, setDemoAccounts] = useState<any[]>([]);
 
   const platformHealth = {
     uptime: 99.98,
@@ -30,14 +55,73 @@ export default function SuperAdminDashboard() {
     { name: 'Sentinel', status: 'Online', confidence: 99, tasks: 3847, health: 99 },
   ];
 
+  const demoEmails = [
+    'citizen@smartwaste.africa',
+    'contractor@smartwaste.africa',
+    'dispatcher@smartwaste.africa',
+    'admin@smartwaste.africa',
+    'executive@smartwaste.africa',
+    'superadmin@smartwaste.africa',
+  ];
+
+  useEffect(() => {
+    fetchUsers();
+    fetchPermissions();
+  }, []);
+
+  const fetchUsers = async () => {
+    const { data } = await supabase
+      .from('profiles')
+      .select('*')
+      .order('created_at', { ascending: false });
+    setUsers(data || []);
+    setLoadingUsers(false);
+
+    // Extract demo accounts
+    const demos = (data || []).filter(u => demoEmails.includes(u.email));
+    setDemoAccounts(demos);
+  };
+
+  const fetchPermissions = async () => {
+    const { data } = await supabase
+      .from('permission_templates')
+      .select('*')
+      .order('role_name');
+    setPermissions(data || []);
+  };
+
+  const handleDemoLogin = async (role: string) => {
+    setDemoRole(role);
+    const dashboardRoutes: Record<string, string> = {
+      citizen: '/citizen',
+      contractor: '/contractor',
+      dispatcher: '/dispatcher',
+      municipal_admin: '/admin',
+      executive: '/executive',
+      super_admin: '/superadmin',
+    };
+    navigate(dashboardRoutes[role] || '/dashboard');
+  };
+
+  const handleRefreshUser = async (userId: string) => {
+    await supabase.from('audit_logs').insert({
+      user_id: profile?.id || null,
+      action: 'user_refreshed',
+      entity_type: 'profiles',
+      entity_id: userId,
+      details: { refreshed_by: profile?.id },
+    });
+    fetchUsers();
+  };
+
   return (
     <div className="min-h-screen p-4 lg:p-6">
-      <div className="max-w-[1200px] mx-auto">
+      <div className="max-w-[1400px] mx-auto">
         <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} className="mb-6">
           <div className="flex items-center justify-between">
             <div>
               <h1 className="text-3xl font-bold text-slate-50 mb-2">System Console</h1>
-              <p className="text-slate-400">Welcome back, {profile?.full_name || 'Super Admin'}. Global platform governance and health monitoring.</p>
+              <p className="text-slate-400">Welcome, {profile?.full_name || 'Super Admin'}. Global platform governance and health monitoring.</p>
             </div>
             <div className="flex items-center gap-2">
               <span className="px-3 py-1.5 bg-red-500/10 text-red-400 text-xs rounded-full border border-red-500/20">
@@ -62,8 +146,8 @@ export default function SuperAdminDashboard() {
             <div className="text-xs text-slate-500">Errors</div>
           </div>
           <div className="metric-card border-l-2 border-l-blue-500">
-            <div className="text-2xl font-bold text-blue-400">{platformHealth.activeUsers}</div>
-            <div className="text-xs text-slate-500">Active Users</div>
+            <div className="text-2xl font-bold text-blue-400">{users.length}</div>
+            <div className="text-xs text-slate-500">Total Users</div>
           </div>
           <div className="metric-card border-l-2 border-l-violet-500">
             <div className="text-2xl font-bold text-violet-400">{counties.length}</div>
@@ -75,7 +159,137 @@ export default function SuperAdminDashboard() {
           </div>
         </div>
 
-        {/* Admin Modules */}
+        {/* Demo Mode Quick Switcher */}
+        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="glass-panel p-6 mb-6">
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-lg font-bold text-slate-50 flex items-center gap-2">
+              <Crown className="w-5 h-5 text-amber-400" /> Demo Role Switcher
+            </h2>
+          </div>
+          <p className="text-xs text-slate-500 mb-4">Instantly switch between role perspectives for capstone demonstration.</p>
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
+            {['citizen', 'contractor', 'dispatcher', 'municipal_admin', 'executive', 'super_admin'].map((role) => (
+              <button
+                key={role}
+                onClick={() => handleDemoLogin(role)}
+                className={`p-4 rounded-lg border transition-all text-left hover:border-emerald-500/30 ${roleColors[role]}`}
+              >
+                <div className="text-sm font-bold mb-1">{roleLabels[role]}</div>
+                <div className="text-xs opacity-70">Switch to view</div>
+              </button>
+            ))}
+          </div>
+        </motion.div>
+
+        {/* Two-column layout */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+          {/* Users & Roles Panel */}
+          <motion.div initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} className="glass-panel p-6">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-lg font-bold text-slate-50 flex items-center gap-2">
+                <Users className="w-5 h-5 text-emerald-400" /> Users & Roles
+              </h2>
+              <button onClick={() => fetchUsers()} className="text-xs text-emerald-400 hover:text-emerald-300">
+                <RefreshCw className="w-4 h-4" />
+              </button>
+            </div>
+
+            {loadingUsers ? (
+              <div className="text-center py-8 text-slate-500">Loading...</div>
+            ) : (
+              <div className="space-y-2 max-h-80 overflow-y-auto">
+                {users.slice(0, 15).map((u) => (
+                  <div key={u.id} className="flex items-center justify-between p-3 bg-slate-800/50 rounded-lg border border-slate-700/30">
+                    <div>
+                      <div className="text-sm font-bold text-slate-50">{u.full_name || u.email}</div>
+                      <div className="text-xs text-slate-500">{u.email}</div>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <span className={`text-xs px-2 py-1 rounded-full border ${roleColors[u.role] || 'text-slate-400 bg-slate-500/10'}`}>
+                        {roleLabels[u.role] || u.role}
+                      </span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            <button onClick={() => navigate('/users')} className="w-full mt-4 btn-secondary text-sm">
+              Manage All Users <ArrowRight className="w-4 h-4 inline" />
+            </button>
+          </motion.div>
+
+          {/* Permissions Panel */}
+          <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} className="glass-panel p-6">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-lg font-bold text-slate-50 flex items-center gap-2">
+                <Key className="w-5 h-5 text-emerald-400" /> Permission Templates
+              </h2>
+            </div>
+
+            <div className="space-y-2">
+              {permissions.map((p) => (
+                <div key={p.id} className="p-3 bg-slate-800/50 rounded-lg border border-slate-700/30">
+                  <div className="flex items-center justify-between mb-2">
+                    <span className={`text-sm font-bold ${roleColors[p.role_name]?.split(' ')[0] || 'text-slate-300'}`}>
+                      {roleLabels[p.role_name] || p.role_name}
+                    </span>
+                    <span className="text-xs text-slate-500">
+                      {(p.permissions as string[]).length} permissions
+                    </span>
+                  </div>
+                  <div className="flex flex-wrap gap-1">
+                    {(p.permissions as string[]).slice(0, 4).map((perm: string) => (
+                      <span key={perm} className="px-2 py-0.5 bg-slate-700 rounded text-[10px] text-slate-400">
+                        {perm}
+                      </span>
+                    ))}
+                    {(p.permissions as string[]).length > 4 && (
+                      <span className="px-2 py-0.5 bg-slate-700 rounded text-[10px] text-slate-500">
+                        +{(p.permissions as string[]).length - 4} more
+                      </span>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            <button onClick={() => navigate('/permissions')} className="w-full mt-4 btn-secondary text-sm">
+              Manage Permissions <ArrowRight className="w-4 h-4 inline" />
+            </button>
+          </motion.div>
+        </div>
+
+        {/* Demo Accounts Status */}
+        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="glass-panel p-6 mb-6">
+          <h2 className="text-lg font-bold text-slate-50 mb-4 flex items-center gap-2">
+            <UserPlus className="w-5 h-5 text-emerald-400" /> Demo Accounts Status
+          </h2>
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
+            {demoEmails.map((email) => {
+              const existingUser = demoAccounts.find(u => u.email === email);
+              const role = email.split('@')[0] === 'admin' ? 'municipal_admin' : email.split('@')[0] as string;
+              return (
+                <div key={email} className="p-3 bg-slate-800/50 rounded-lg border border-slate-700/30">
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-sm font-medium text-slate-300">{roleLabels[role] || role}</span>
+                    {existingUser ? (
+                      <CheckCircle className="w-4 h-4 text-emerald-400" />
+                    ) : (
+                      <XCircle className="w-4 h-4 text-red-400" />
+                    )}
+                  </div>
+                  <div className="text-xs text-slate-500 truncate">{email}</div>
+                  {existingUser && (
+                    <div className="text-xs text-slate-600 mt-1 capitalize">{existingUser.account_status}</div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        </motion.div>
+
+        {/* Admin Modules Quick Access */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
           <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="glass-panel p-5">
             <Users className="w-6 h-6 text-emerald-400 mb-3" />
