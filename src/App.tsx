@@ -1,9 +1,10 @@
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { CountyProvider } from './context/CountyContext';
 import ProtectedRoute from './components/ProtectedRoute';
 import AuthPage from './components/AuthPage';
 import TopNav from './components/TopNav';
+import SidebarNav from './components/SidebarNav';
 import CitizenDashboard from './components/CitizenDashboard';
 import ContractorDashboard from './components/ContractorDashboard';
 import DispatcherDashboard from './components/DispatcherDashboard';
@@ -28,18 +29,17 @@ import UserManagement from './pages/UserManagement';
 import AuditTrail from './pages/AuditTrail';
 import Notifications from './pages/Notifications';
 import SystemSettings from './pages/SystemSettings';
+import SystemHealth from './pages/SystemHealth';
 import Profile from './pages/Profile';
 import Permissions from './pages/Permissions';
 
 function RoleDashboard() {
   const { effectiveRole, isAuthenticated } = useAuth();
 
-  // If not authenticated, redirect to auth
   if (!isAuthenticated) {
     return <Navigate to="/auth" replace />;
   }
 
-  // Route to role-specific dashboard
   switch (effectiveRole) {
     case 'citizen': return <CitizenDashboard />;
     case 'contractor': return <ContractorDashboard />;
@@ -71,41 +71,51 @@ function App() {
 }
 
 function MainLayout() {
+  const location = useLocation();
+  const { isAuthenticated } = useAuth();
+  const isAuthPage = location.pathname === '/auth';
+  const isHomePage = location.pathname === '/';
+  const showSidebar = isAuthenticated && !isAuthPage && !isHomePage;
+
   return (
-    <>
-      <TopNav />
-      <main>
-        <Routes>
-          <Route path="/" element={<Home />} />
-          {/* Role-specific dashboard routes */}
-          <Route path="/dashboard" element={<ProtectedRoute><RoleDashboard /></ProtectedRoute>} />
-          <Route path="/citizen" element={<ProtectedRoute><CitizenPortal /></ProtectedRoute>} />
-          <Route path="/contractor" element={<ProtectedRoute roles={['contractor','dispatcher','admin','municipal_admin','superadmin','super_admin']}><ContractorPortal /></ProtectedRoute>} />
-          <Route path="/dispatcher" element={<ProtectedRoute roles={['dispatcher','admin','municipal_admin','superadmin','super_admin']}><DispatcherDashboard /></ProtectedRoute>} />
-          <Route path="/admin" element={<ProtectedRoute roles={['admin','municipal_admin','superadmin','super_admin']}><AdminDashboard /></ProtectedRoute>} />
-          <Route path="/executive" element={<ProtectedRoute roles={['executive','admin','municipal_admin','superadmin','super_admin']}><ExecutivePortal /></ProtectedRoute>} />
-          <Route path="/superadmin" element={<ProtectedRoute roles={['superadmin','super_admin']}><SuperAdminDashboard /></ProtectedRoute>} />
-          {/* Shared pages */}
-          <Route path="/gis" element={<ProtectedRoute roles={['dispatcher','admin','municipal_admin','superadmin','super_admin']}><GISCenter /></ProtectedRoute>} />
-          <Route path="/telemetry" element={<ProtectedRoute roles={['dispatcher','admin','municipal_admin','superadmin','super_admin']}><Telemetry /></ProtectedRoute>} />
-          <Route path="/agents" element={<ProtectedRoute roles={['dispatcher','admin','municipal_admin','superadmin','super_admin']}><Agents /></ProtectedRoute>} />
-          <Route path="/fleet" element={<ProtectedRoute roles={['dispatcher','admin','municipal_admin','superadmin','super_admin']}><Fleet /></ProtectedRoute>} />
-          <Route path="/bins" element={<ProtectedRoute roles={['dispatcher','admin','municipal_admin','superadmin','super_admin']}><SmartBinNetwork /></ProtectedRoute>} />
-          <Route path="/sustainability" element={<ProtectedRoute roles={['executive','admin','municipal_admin','superadmin','super_admin']}><Sustainability /></ProtectedRoute>} />
-          <Route path="/incidents" element={<ProtectedRoute roles={['dispatcher','admin','municipal_admin','superadmin','super_admin']}><IncidentCenter /></ProtectedRoute>} />
-          <Route path="/digital-twin" element={<ProtectedRoute roles={['executive','admin','municipal_admin','superadmin','super_admin']}><DigitalTwin /></ProtectedRoute>} />
-          <Route path="/reports" element={<ProtectedRoute><ReportGenerator /></ProtectedRoute>} />
-          {/* Admin pages */}
-          <Route path="/users" element={<ProtectedRoute roles={['admin','municipal_admin','superadmin','super_admin']}><UserManagement /></ProtectedRoute>} />
-          <Route path="/audit" element={<ProtectedRoute roles={['admin','municipal_admin','superadmin','super_admin']}><AuditTrail /></ProtectedRoute>} />
-          <Route path="/settings" element={<ProtectedRoute roles={['admin','municipal_admin','superadmin','super_admin']}><SystemSettings /></ProtectedRoute>} />
-          <Route path="/permissions" element={<ProtectedRoute roles={['superadmin','super_admin']}><Permissions /></ProtectedRoute>} />
-          {/* User pages */}
-          <Route path="/notifications" element={<ProtectedRoute><Notifications /></ProtectedRoute>} />
-          <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
-        </Routes>
-      </main>
-    </>
+    <div className="flex min-h-screen">
+      {showSidebar && <SidebarNav />}
+      <div className="flex-1 flex flex-col min-h-screen">
+        {!isAuthPage && <TopNav />}
+        <main className="flex-1">
+          <Routes>
+            <Route path="/" element={<Home />} />
+            {/* Role-specific dashboard routes */}
+            <Route path="/dashboard" element={<ProtectedRoute><RoleDashboard /></ProtectedRoute>} />
+            <Route path="/citizen" element={<ProtectedRoute><CitizenPortal /></ProtectedRoute>} />
+            <Route path="/contractor" element={<ProtectedRoute roles={['contractor','dispatcher','admin','municipal_admin','superadmin','super_admin']}><ContractorPortal /></ProtectedRoute>} />
+            <Route path="/dispatcher" element={<ProtectedRoute roles={['dispatcher','admin','municipal_admin','superadmin','super_admin']}><DispatcherDashboard /></ProtectedRoute>} />
+            <Route path="/admin" element={<ProtectedRoute roles={['admin','municipal_admin','superadmin','super_admin']}><AdminDashboard /></ProtectedRoute>} />
+            <Route path="/executive" element={<ProtectedRoute roles={['executive','admin','municipal_admin','superadmin','super_admin']}><ExecutivePortal /></ProtectedRoute>} />
+            <Route path="/superadmin" element={<ProtectedRoute roles={['superadmin','super_admin']}><SuperAdminDashboard /></ProtectedRoute>} />
+            {/* Shared pages */}
+            <Route path="/gis" element={<ProtectedRoute roles={['dispatcher','admin','municipal_admin','superadmin','super_admin']}><GISCenter /></ProtectedRoute>} />
+            <Route path="/telemetry" element={<ProtectedRoute roles={['dispatcher','admin','municipal_admin','superadmin','super_admin']}><Telemetry /></ProtectedRoute>} />
+            <Route path="/agents" element={<ProtectedRoute roles={['dispatcher','admin','municipal_admin','superadmin','super_admin']}><Agents /></ProtectedRoute>} />
+            <Route path="/fleet" element={<ProtectedRoute roles={['contractor','dispatcher','admin','municipal_admin','superadmin','super_admin']}><Fleet /></ProtectedRoute>} />
+            <Route path="/bins" element={<ProtectedRoute roles={['dispatcher','admin','municipal_admin','superadmin','super_admin']}><SmartBinNetwork /></ProtectedRoute>} />
+            <Route path="/sustainability" element={<ProtectedRoute roles={['executive','admin','municipal_admin','superadmin','super_admin']}><Sustainability /></ProtectedRoute>} />
+            <Route path="/incidents" element={<ProtectedRoute roles={['contractor','dispatcher','admin','municipal_admin','superadmin','super_admin']}><IncidentCenter /></ProtectedRoute>} />
+            <Route path="/digital-twin" element={<ProtectedRoute roles={['executive','admin','municipal_admin','superadmin','super_admin']}><DigitalTwin /></ProtectedRoute>} />
+            <Route path="/reports" element={<ProtectedRoute><ReportGenerator /></ProtectedRoute>} />
+            {/* Admin pages */}
+            <Route path="/users" element={<ProtectedRoute roles={['admin','municipal_admin','superadmin','super_admin']}><UserManagement /></ProtectedRoute>} />
+            <Route path="/audit" element={<ProtectedRoute roles={['admin','municipal_admin','superadmin','super_admin']}><AuditTrail /></ProtectedRoute>} />
+            <Route path="/settings" element={<ProtectedRoute roles={['admin','municipal_admin','superadmin','super_admin']}><SystemSettings /></ProtectedRoute>} />
+            <Route path="/permissions" element={<ProtectedRoute roles={['superadmin','super_admin']}><Permissions /></ProtectedRoute>} />
+            <Route path="/health" element={<ProtectedRoute roles={['superadmin','super_admin']}><SystemHealth /></ProtectedRoute>} />
+            {/* User pages */}
+            <Route path="/notifications" element={<ProtectedRoute><Notifications /></ProtectedRoute>} />
+            <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
+          </Routes>
+        </main>
+      </div>
+    </div>
   );
 }
 

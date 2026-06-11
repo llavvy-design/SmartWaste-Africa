@@ -13,8 +13,10 @@ const roleLabels: Record<string, string> = {
   citizen: 'Citizen',
   contractor: 'Contractor',
   dispatcher: 'Dispatcher',
+  admin: 'Municipal Admin',
   municipal_admin: 'Municipal Admin',
   executive: 'Executive',
+  superadmin: 'Super Admin',
   super_admin: 'Super Admin',
 };
 
@@ -55,6 +57,13 @@ export default function Profile() {
   const [passwordError, setPasswordError] = useState('');
   const [passwordSuccess, setPasswordSuccess] = useState(false);
   const [changingPassword, setChangingPassword] = useState(false);
+
+  // Email change form
+  const [emailForm, setEmailForm] = useState({ newEmail: '', password: '' });
+  const [emailError, setEmailError] = useState('');
+  const [emailSuccess, setEmailSuccess] = useState(false);
+  const [changingEmail, setChangingEmail] = useState(false);
+  const [resendingVerification, setResendingVerification] = useState(false);
 
   // Notification preferences
   const [notifPrefs, setNotifPrefs] = useState({
@@ -174,6 +183,66 @@ export default function Profile() {
     setSavingNotifs(true);
     await updateProfile({ notification_preferences: notifPrefs as any });
     setSavingNotifs(false);
+  };
+
+  const handleChangeEmail = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setEmailError('');
+    setEmailSuccess(false);
+
+    if (!emailForm.newEmail || !emailForm.password) {
+      setEmailError('Email and password are required');
+      return;
+    }
+
+    setChangingEmail(true);
+
+    // Verify password
+    const { error: signInError } = await supabase.auth.signInWithPassword({
+      email: user?.email || '',
+      password: emailForm.password,
+    });
+
+    if (signInError) {
+      setEmailError('Password is incorrect');
+      setChangingEmail(false);
+      return;
+    }
+
+    // Update email
+    const { error: updateError } = await supabase.auth.updateUser({
+      email: emailForm.newEmail,
+    });
+
+    if (updateError) {
+      setEmailError(updateError.message);
+    } else {
+      setEmailSuccess(true);
+      setEmailForm({ newEmail: '', password: '' });
+      await supabase.from('audit_logs').insert({
+        user_id: user?.id || null,
+        action: 'email_change_requested',
+        entity_type: 'profiles',
+        entity_id: user?.id || '',
+        details: { new_email: emailForm.newEmail },
+      });
+    }
+
+    setChangingEmail(false);
+  };
+
+  const handleResendVerification = async () => {
+    setResendingVerification(true);
+    const { error } = await supabase.auth.resend({
+      type: 'signup',
+      email: user?.email || '',
+    });
+    setResendingVerification(false);
+    if (!error) {
+      alert('Verification email sent!');
+    } else {
+      alert(error.message);
+    }
   };
 
   const tabs = [
@@ -370,6 +439,71 @@ export default function Profile() {
                   exit={{ opacity: 0, x: -20 }}
                   className="space-y-6"
                 >
+                  {/* Email Change */}
+                  <div className="glass-panel p-6">
+                    <h3 className="text-lg font-bold text-slate-50 mb-4 flex items-center gap-2">
+                      <Mail className="w-5 h-5 text-emerald-400" /> Change Email
+                    </h3>
+                    <div className="mb-4 p-3 bg-slate-800/50 rounded-lg border border-slate-700/50">
+                      <div className="text-xs text-slate-500">Current Email</div>
+                      <div className="text-sm text-slate-300">{user?.email}</div>
+                      {user?.email_confirmed_at ? (
+                        <div className="flex items-center gap-1 text-xs text-emerald-400 mt-1">
+                          <CheckCircle className="w-3 h-3" /> Verified
+                        </div>
+                      ) : (
+                        <div className="flex items-center gap-2 mt-1">
+                          <span className="text-xs text-amber-400">Not verified</span>
+                          <button
+                            onClick={handleResendVerification}
+                            disabled={resendingVerification}
+                            className="text-xs text-emerald-400 hover:text-emerald-300"
+                          >
+                            {resendingVerification ? 'Sending...' : 'Resend verification'}
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                    <form onSubmit={handleChangeEmail} className="space-y-4">
+                      <div>
+                        <label className="block text-xs text-slate-500 mb-1">New Email Address</label>
+                        <input
+                          type="email"
+                          value={emailForm.newEmail}
+                          onChange={(e) => setEmailForm({ ...emailForm, newEmail: e.target.value })}
+                          className="w-full px-3 py-2.5 bg-slate-800 border border-slate-700 rounded-lg text-sm text-slate-300 focus:border-emerald-500 outline-none"
+                          placeholder="new@email.com"
+                          required
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-xs text-slate-500 mb-1">Confirm with Password</label>
+                        <input
+                          type="password"
+                          value={emailForm.password}
+                          onChange={(e) => setEmailForm({ ...emailForm, password: e.target.value })}
+                          className="w-full px-3 py-2.5 bg-slate-800 border border-slate-700 rounded-lg text-sm text-slate-300 focus:border-emerald-500 outline-none"
+                          placeholder="Your current password"
+                          required
+                        />
+                      </div>
+                      {emailError && (
+                        <div className="flex items-center gap-2 p-3 bg-red-500/10 rounded-lg border border-red-500/20 text-sm text-red-400">
+                          <AlertTriangle className="w-4 h-4" /> {emailError}
+                        </div>
+                      )}
+                      {emailSuccess && (
+                        <div className="flex items-center gap-2 p-3 bg-emerald-500/10 rounded-lg border border-emerald-500/20 text-sm text-emerald-400">
+                          <CheckCircle className="w-4 h-4" /> Verification email sent to {emailForm.newEmail || 'your new address'}
+                        </div>
+                      )}
+                      <button type="submit" disabled={changingEmail} className="btn-primary disabled:opacity-50">
+                        {changingEmail ? <Loader2 className="w-4 h-4 animate-spin" /> : <><Mail className="w-4 h-4" /> Change Email</>}
+                      </button>
+                    </form>
+                  </div>
+
+                  {/* Password Change */}
                   <div className="glass-panel p-6">
                     <h3 className="text-lg font-bold text-slate-50 mb-4 flex items-center gap-2">
                       <Key className="w-5 h-5 text-emerald-400" /> Change Password
